@@ -5,7 +5,7 @@ osdmenu: osdmenu.elf
 hosdmenu: hosdmenu.elf
 
 clean:
-	rm osdmenu.elf hosdmenu.elf
+	rm -f osdmenu.elf hosdmenu.elf
 	$(MAKE) -C patcher clean
 
 # OSDMenu
