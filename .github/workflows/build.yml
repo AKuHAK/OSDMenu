@@ -8,6 +8,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: ghcr.io/ps2homebrew/ps2homebrew:main
+    outputs:
+      release_build: ${{ steps.make.outputs.release_build }}
     steps:
       - name: Install cmake
         run: |
@@ -28,12 +30,19 @@ jobs:
           KELFSERVER_API_ADDRESS: ${{ secrets.KELFSERVER_API_ADDRESS }}
           KELFSERVER_API_KEY: ${{ secrets.KELFSERVER_API_KEY }}
         run: |
-          cmake -B build -DRELEASE=ON
+          if [ -n "$KELFSERVER_API_ADDRESS" ] && [ -n "$KELFSERVER_API_KEY" ]; then
+            echo "release_build=true" >> "$GITHUB_OUTPUT"
+            cmake -B build -DRELEASE=ON
+          else
+            echo "release_build=false" >> "$GITHUB_OUTPUT"
+            unset KELFSERVER_API_ADDRESS KELFSERVER_API_KEY
+            cmake -B build
+          fi
           cmake --build build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
-        if: steps.make.outcome == 'success'
+        if: steps.make.outcome == 'success' && steps.make.outputs.release_build == 'true'
         with:
           name: artifacts
           path: |
@@ -43,7 +52,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     permissions: write-all
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+    if: needs.build.outputs.release_build == 'true' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
 
